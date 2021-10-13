@@ -1,6 +1,6 @@
 require 'test/unit'
-require_relative '../lib/openapi_client.rb'
-include OpenapiClient
+require_relative '../lib/openapi_ruby_sdk.rb'
+include RubySdk
 
 begin
     BW_USERNAME = ENV.fetch("BW_USERNAME")
@@ -17,19 +17,19 @@ rescue
 end
 
 class IntegrationTest < Test::Unit::TestCase
-    OpenapiClient.configure do |config|
+    RubySdk.configure do |config|
         # Configure HTTP basic authorization: httpBasic
         config.username = BW_USERNAME
         config.password = BW_PASSWORD
         #config.ssl_verify = false # remove for testing on push
     end
     
-    $api_instance_msg = OpenapiClient::MessagesApi.new()
-    $api_instance_media = OpenapiClient::MediaApi.new()
+    $api_instance_msg = RubySdk::MessagesApi.new()
+    $api_instance_media = RubySdk::MediaApi.new()
 
     def test_create_message
         message_text = "ruby sdk test"
-        body = OpenapiClient::MessageRequest.new(
+        body = RubySdk::MessageRequest.new(
             application_id: BW_MESSAGING_APPLICATION_ID,
             to: [USER_NUMBER],
             from: BW_NUMBER,
@@ -59,7 +59,7 @@ class IntegrationTest < Test::Unit::TestCase
     end
 
     def test_create_message_invalid_phone_number
-        body = OpenapiClient::MessageRequest.new(
+        body = RubySdk::MessageRequest.new(
             application_id: BW_MESSAGING_APPLICATION_ID,
             to: ["+1invalid"],
             from: BW_NUMBER,
@@ -68,7 +68,7 @@ class IntegrationTest < Test::Unit::TestCase
         begin
             $api_instance_msg.create_message_with_http_info(BW_ACCOUNT_ID, body)
             assert(false, "Expected exception not raised")
-        rescue OpenapiClient::ApiError => e
+        rescue RubySdk::ApiError => e
             resp_body =  JSON.parse(e.response_body)
             expected_desc = "\'+1invalid\' must be replaced with a valid E164 formatted telephone number"
             assert_equal(400, e.code, "incorrect response code")

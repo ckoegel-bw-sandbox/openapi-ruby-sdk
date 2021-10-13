@@ -17,7 +17,7 @@ require_relative 'openapi_ruby_sdk/version'
 require_relative 'openapi_ruby_sdk/configuration'
 
 # Models
-require_relative 'openapi_ruby_sdk/models/api_error'
+#require_relative 'openapi_ruby_sdk/models/api_error'
 require_relative 'openapi_ruby_sdk/models/bandwidth_callback_message'
 require_relative 'openapi_ruby_sdk/models/bandwidth_message'
 require_relative 'openapi_ruby_sdk/models/bandwidth_message_item'
