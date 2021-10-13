@@ -1,5 +1,6 @@
 require 'test/unit'
 require_relative '../lib/openapi_ruby_sdk.rb'
+require 'securerandom'
 include RubySdk
 
 begin
@@ -78,7 +79,7 @@ class IntegrationTest < Test::Unit::TestCase
     end
 
     def test_all_media
-        media_name = 'ruby_media_test'
+        media_name = 'ruby_media' + SecureRandom.uuid
         media_data = '123456'
 
         #media upload
