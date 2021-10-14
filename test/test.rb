@@ -17,7 +17,7 @@ rescue
     exit(-1)
 end
 
-class IntegrationTest < Test::Unit::TestCase
+class ValidationTest < Test::Unit::TestCase
     RubySdk.configure do |config|
         # Configure HTTP basic authorization: httpBasic
         config.username = BW_USERNAME
@@ -25,6 +25,7 @@ class IntegrationTest < Test::Unit::TestCase
         #config.ssl_verify = false # remove for testing on push
     end
     
+    #-----------Messaging and Media Tests-----------
     $api_instance_msg = RubySdk::MessagesApi.new()
     $api_instance_media = RubySdk::MediaApi.new()
 
@@ -100,5 +101,23 @@ class IntegrationTest < Test::Unit::TestCase
         #media delete
         del_response = $api_instance_media.delete_media_with_http_info(BW_ACCOUNT_ID, media_name)
         assert_equal(204, del_response[1], "incorrect response code")
+    end
+
+    #-----------Voice Tests-----------
+    $api_instance_voice = RubySdk::CallsApi.new()
+    
+    def test_create_call_and_get_call_state
+        call_body = RubySdk::CreateCallRequest.new(
+            application_id: BW_VOICE_APPLICATION_ID,
+            to: USER_NUMBER,
+            from: BW_NUMBER,
+            answer_url: BASE_CALLBACK_URL
+        )
+        # call_body.to = USER_NUMBER
+        # call_body.from = BW_NUMBER
+        # call_body.application_id = BW_VOICE_APPLICATION_ID
+        # call_body.answer_url = BASE_CALLBACK_URL
+        response = $api_instance_voice.create_call_with_http_info(BW_ACCOUNT_ID, call_body)
+        assert_equal(201, response[1], "incorrect status code")
     end
 end

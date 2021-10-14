@@ -238,6 +238,12 @@ module RubySdk
           description: "Voice API",
           }
         ],
+        "Pipedream": [
+          {
+            url: "https://d6979da481772c167be0edcd10eb64d7.m.pipedream.net",
+            description: "testing"
+          }
+        ],
         "CallsApi.get_call": [
           {
           url: "https://voice.bandwidth.com",
