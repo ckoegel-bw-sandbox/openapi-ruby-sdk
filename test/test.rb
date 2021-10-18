@@ -334,12 +334,22 @@ class ValidationTest < Test::Unit::TestCase
     assert_equal(session_body.tag.to_s, get_response[DATA].tag, "gotten session tag does not match expected")
     end
 
-    def test_failed_get_session
+    def test_failed_get_session     # Test to make sure correct errors are thrown when inproperly trying to get session details 
         bad_id = "invalid"
-        assert_raise(RubySdk::ApiError, "expected exception not raised") do
-            response = $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, bad_id)
+        dne_id = "11111111-2222-3333-4444-555555555555"
+        expected_error = "Could not find session for id " + dne_id
+        malf_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, bad_id)
         end
-        assert_equal(404, response[CODE], "incorrect response code")
-        asser
+        assert_equal(400, malf_e.code, "incorrect response code")
+        assert_equal("Malformed session id", JSON.parse(malf_e.response_body)['error'], "response error does not match")
+
+        dne_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, dne_id)
+        end
+        assert_equal(404, dne_e.code, "incorrect response code")
+        assert_equal(expected_error, JSON.parse(dne_e.response_body)['error'], "response error does not match")
+
+
     end
 end
