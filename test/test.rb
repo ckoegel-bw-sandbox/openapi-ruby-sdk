@@ -1,6 +1,7 @@
 require 'test/unit'
 require_relative '../lib/openapi_ruby_sdk.rb'
 require 'securerandom'
+require 'set'
 include RubySdk
 
 DATA = 0    # index for response array related to the response data
@@ -113,7 +114,6 @@ class ValidationTest < Test::Unit::TestCase
         list_media = $api_instance_media.list_media_with_http_info(BW_ACCOUNT_ID)
         assert_equal(200, list_media[CODE], "incorrect response code")
         assert_equal(media_data.length, list_media[DATA][0].content_length, "incorrect data length")
-        assert_equal(media_name, list_media[DATA][0].media_name, "could not find media on account")
 
         # download media
         downloaded_media = $api_instance_media.get_media_with_http_info(BW_ACCOUNT_ID, media_name, debug_return_type: 'String')
@@ -214,11 +214,13 @@ class ValidationTest < Test::Unit::TestCase
             disconnect_method: "GET"
         )
 
+        dne_id = "does-not-exist"
+
         call_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
             $api_instance_voice.create_call_with_http_info(BW_ACCOUNT_ID, call_body)
         end
         get_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
-            $api_instance_voice.get_call_with_http_info(BW_ACCOUNT_ID, "does-not-exist")
+            $api_instance_voice.get_call_with_http_info(BW_ACCOUNT_ID, dne_id)
         end
 
         # asserts for creating bad call
@@ -318,6 +320,7 @@ class ValidationTest < Test::Unit::TestCase
 
     #-----------WebRTC Tests-----------
     $api_instance_webrtc = RubySdk::SessionsApi.new()
+    $api_instance_participants = RubySdk::ParticipantsApi.new()
 
     def test_webrtc_create_get_delete_session      # Test to create, get, and delete a webrtc session
     session_body = RubySdk::Session.new(
@@ -334,7 +337,7 @@ class ValidationTest < Test::Unit::TestCase
     assert_equal(session_body.tag.to_s, get_response[DATA].tag, "gotten session tag does not match expected")
     end
 
-    def test_failed_get_session     # Test to make sure correct errors are thrown when inproperly trying to get session details 
+    def test_failed_get_session     # Test to make sure correct errors are thrown when improperly trying to get session details 
         bad_id = "invalid"
         dne_id = "11111111-2222-3333-4444-555555555555"
         expected_error = "Could not find session for id " + dne_id
@@ -349,5 +352,97 @@ class ValidationTest < Test::Unit::TestCase
         end
         assert_equal(404, dne_e.code, "incorrect response code")
         assert_equal(expected_error, JSON.parse(dne_e.response_body)['error'], "response error does not match")
+    end
+
+    def test_create_get_delete_participant      # Test to successfully create, get, and delete a webrtc participant
+        part_body = RubySdk::Participant.new(
+            publish_permissions: ["VIDEO", "AUDIO"],
+            device_api_version: "V3",
+            tag: "ruby sdk test"
+        )
+        create_response = $api_instance_participants.create_participant_with_http_info(BW_ACCOUNT_ID, participant: part_body)
+        part_id = create_response[DATA].participant.id
+        assert_equal(200, create_response[CODE], "incorrect response code")
+        assert_equal(36, create_response[DATA].participant.id.length, "participant id not set")
+        assert_equal(part_body.publish_permissions.to_set, create_response[DATA].participant.publish_permissions.to_set, "participant permissions do not match")
+        assert_equal(part_body.device_api_version, create_response[DATA].participant.device_api_version, "participant api version does not match")
+        assert_equal(part_body.tag, create_response[DATA].participant.tag, "participant tag does not match")
+
+        get_response = $api_instance_participants.get_participant_with_http_info(BW_ACCOUNT_ID, part_id)
+        assert_equal(200, get_response[CODE], "incorrect response code")
+        assert_equal(part_id, get_response[DATA].id, "participant id does not match")
+        assert_equal(part_body.publish_permissions.to_set, get_response[DATA].publish_permissions.to_set, "participant permissions do not match")
+        assert_equal(part_body.device_api_version, get_response[DATA].device_api_version, "participant api version does not match")
+        assert_equal(part_body.tag, get_response[DATA].tag, "participant tag does not match")
+
+        del_response = $api_instance_participants.delete_participant_with_http_info(BW_ACCOUNT_ID, part_id)
+        assert_equal(204, del_response[CODE], "incorrect response code")
+    end
+
+    def test_failed_create_get_delete_participant       # Test to make sure correct errors are thrown when using invalid participant info
+        part_body_bad = RubySdk::Participant.new(
+            publish_permissions: ["AUDIO", "VIDEO", "INVALID"],
+            device_api_version: "V3",
+            tag: "ruby sdk test invalid"
+        )
+        dne_id = "11111111-2222-3333-4444-555555555555"
+        expected_error = "Could not find participant for id " + dne_id
+
+        create_e = assert_raise(RubySdk::ApiError, "expected ecpetion not raised") do
+            $api_instance_participants.create_participant_with_http_info(BW_ACCOUNT_ID, participant: part_body_bad)
+        end
+        assert_equal(400, create_e.code, "incorrect response code")
+        
+        get_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_participants.get_participant_with_http_info(BW_ACCOUNT_ID, dne_id)
+        end
+        assert_equal(404, get_e.code, "incorrect response code")
+        assert_equal(expected_error, JSON.parse(get_e.response_body)['error'], "response error does not match")
+
+        del_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_participants.delete_participant_with_http_info(BW_ACCOUNT_ID, dne_id)
+        end
+        assert_equal(404, del_e.code, "incorrect response code")
+        assert_equal(expected_error, JSON.parse(del_e.response_body)['error'], "response error does not match")
+    end
+
+    #-----------TN Lookup Tests-----------
+    $api_instance_tnlookup = RubySdk::PhoneNumberLookupApi.new()
+
+    def test_create_get_tn_lookup
+        tn_body = RubySdk::OrderRequest.new(
+            tns: [BW_NUMBER]
+        )
+        create_response = $api_instance_tnlookup.lookup_request_with_http_info(BW_ACCOUNT_ID, tn_body)
+        assert_equal(202, create_response[CODE], "incorrect response code")
+        assert_equal(36, create_response[DATA].request_id.length, "request id not set")
+        assert(create_response[DATA].status.is_a?(String), "incorrect status data type")
+
+        req_id = create_response[DATA].request_id
+        get_response = $api_instance_tnlookup.lookup_request_status_with_http_info(BW_ACCOUNT_ID, req_id)
+        assert_equal(200, get_response[CODE], "incorrect response code")
+        assert_equal(req_id, get_response[DATA].request_id, "request id does not match")
+        assert(get_response[DATA].status.is_a?(String), "incorrect response status type")
+        assert(get_response[DATA].result[0].response_code.is_a?(Integer), "incorrect response code type")
+        assert_equal(BW_NUMBER, get_response[DATA].result[0].e_164_format, "phone number does not match")
+    end
+
+    def test_failed_create_get_tn_lookup
+        tn_body_bad = RubySdk::OrderRequest.new(
+            tns: ["+1invalid"]
+        )
+        req_id_dne = "invalid"
+        expected_error = "Some tns do not match e164 format: " + tn_body_bad.tns[0]
+        #req_id_dne = "11111111-2222-3333-4444-555555555555"
+        create_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_tnlookup.lookup_request_with_http_info(BW_ACCOUNT_ID, tn_body_bad)
+        end
+        assert_equal(400, create_e.code, "incorrect response type")
+        assert_equal(expected_error, JSON.parse(create_e.response_body)['message'], "response error does not match")
+
+        get_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_tnlookup.lookup_request_status_with_http_info(BW_ACCOUNT_ID, req_id_dne)
+        end
+        assert_equal(404, get_e.code, "incorrect response type")
     end
 end
