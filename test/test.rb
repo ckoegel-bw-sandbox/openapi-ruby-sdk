@@ -349,7 +349,5 @@ class ValidationTest < Test::Unit::TestCase
         end
         assert_equal(404, dne_e.code, "incorrect response code")
         assert_equal(expected_error, JSON.parse(dne_e.response_body)['error'], "response error does not match")
-
-
     end
 end
