@@ -3,6 +3,9 @@ require_relative '../lib/openapi_ruby_sdk.rb'
 require 'securerandom'
 include RubySdk
 
+DATA = 0    # index for response array related to the response data
+CODE = 1    # index for response array related to the status code
+
 begin
     BW_USERNAME = ENV.fetch("BW_USERNAME")
     BW_PASSWORD = ENV.fetch("BW_PASSWORD")
@@ -29,8 +32,8 @@ class ValidationTest < Test::Unit::TestCase
     $api_instance_msg = RubySdk::MessagesApi.new()
     $api_instance_media = RubySdk::MediaApi.new()
 
-    def test_create_message
-        message_text = "ruby sdk test"
+    def test_create_message_sms     # Test sending an SMS message
+        message_text = "ruby sdk test SMS"
         body = RubySdk::MessageRequest.new(
             application_id: BW_MESSAGING_APPLICATION_ID,
             to: [USER_NUMBER],
@@ -38,86 +41,305 @@ class ValidationTest < Test::Unit::TestCase
             text: message_text
         )
         response = $api_instance_msg.create_message_with_http_info(BW_ACCOUNT_ID, body)
-        assert_equal(202, response[1], "incorrect response code")
-        assert_equal(29, response[0].id.length, "id not set")
-        assert_equal(BW_NUMBER, response[0].owner, "message owner not correct")
-        assert_equal(BW_NUMBER, response[0].from, "from number does not match")
-        assert_equal([USER_NUMBER], response[0].to, "to number does not match")
-        assert_equal(body.tag, response[0].tag, "tags do not match")
-        assert_equal(body.media,response[0].media,  "media does not match")
-        assert_equal(message_text, response[0].text, "message text does not match")
+        assert_equal(202, response[CODE], "incorrect response code")
+        assert_equal(29, response[DATA].id.length, "id not set")
+        assert_equal(BW_NUMBER, response[DATA].owner, "message owner not correct")
+        assert_equal(BW_NUMBER, response[DATA].from, "from number does not match")
+        assert_equal([USER_NUMBER], response[DATA].to, "to number does not match")
+        assert_equal(body.tag, response[DATA].tag, "tags do not match")
+        assert_equal(body.media,response[DATA].media,  "media does not match")
+        assert_equal(message_text, response[DATA].text, "message text does not match")
     end
 
-    def test_get_message
+    def test_create_message_mms     # Test sending an MMS message
+        message_text = "ruby sdk test MMS"
+        body = RubySdk::MessageRequest.new(
+            application_id: BW_MESSAGING_APPLICATION_ID,
+            to: [USER_NUMBER],
+            from: BW_NUMBER,
+            text: message_text,
+            media: ["https://cdn2.thecatapi.com/images/MTY3ODIyMQ.jpg"]
+        )
+        response = $api_instance_msg.create_message_with_http_info(BW_ACCOUNT_ID, body)
+        assert_equal(202, response[CODE], "incorrect response code")
+        assert_equal(29, response[DATA].id.length, "id not set")
+        assert_equal(BW_NUMBER, response[DATA].owner, "message owner not correct")
+        assert_equal(BW_NUMBER, response[DATA].from, "from number does not match")
+        assert_equal([USER_NUMBER], response[DATA].to, "to number does not match")
+        assert_equal(body.tag, response[DATA].tag, "tags do not match")
+        assert_equal(body.media,response[DATA].media,  "media does not match")
+        assert_equal(message_text, response[DATA].text, "message text does not match")
+    end
+
+    def test_get_message    # Test to get most recent message from the BW_NUMBER
         get_opts = {
             :source_tn => BW_NUMBER,
             :message_direction => "OUTBOUND"
         }
         response = $api_instance_msg.get_messages_with_http_info(BW_ACCOUNT_ID, get_opts)
-        assert_equal(200, response[1], "incorrect response code")
-        assert_equal(BW_ACCOUNT_ID, response[0].messages[0].account_id, "account ids do not match")
-        assert_equal("OUTBOUND", response[0].messages[0].message_direction, "message directions do not match")
-        assert_equal(BW_NUMBER, response[0].messages[0].source_tn, "failed to get message from BW_NUMBER")
+        assert_equal(200, response[CODE], "incorrect response code")
+        assert_equal(BW_ACCOUNT_ID, response[DATA].messages[0].account_id, "account ids do not match")
+        assert_equal("OUTBOUND", response[DATA].messages[0].message_direction, "message directions do not match")
+        assert_equal(BW_NUMBER, response[DATA].messages[0].source_tn, "failed to get message from BW_NUMBER")
     end
 
-    def test_create_message_invalid_phone_number
+    def test_create_message_invalid_phone_number    # Test to make sure correct errors are thrown when trying to send a text to an invalid number
         body = RubySdk::MessageRequest.new(
             application_id: BW_MESSAGING_APPLICATION_ID,
             to: ["+1invalid"],
             from: BW_NUMBER,
             text: "ruby sdk test"
         )
-        begin
-            $api_instance_msg.create_message_with_http_info(BW_ACCOUNT_ID, body)
-            assert(false, "Expected exception not raised")
-        rescue RubySdk::ApiError => e
-            resp_body =  JSON.parse(e.response_body)
-            expected_desc = "\'+1invalid\' must be replaced with a valid E164 formatted telephone number"
-            assert_equal(400, e.code, "incorrect response code")
-            assert_equal("request-validation", resp_body['type'], "response type does not match")
-            assert_equal(expected_desc, resp_body['fieldErrors'][0]['description'], "error description does not match expected")
+        e = assert_raise(RubySdk::ApiError, "expected exception not raised") do 
+            $response = $api_instance_msg.create_message_with_http_info(BW_ACCOUNT_ID, body)
+            
         end
+        resp_body =  JSON.parse(e.response_body)
+        expected_desc = "\'+1invalid\' must be replaced with a valid E164 formatted telephone number"
+        assert_equal(400, e.code, "incorrect response code")
+        assert_equal("request-validation", resp_body['type'], "response type does not match")
+        assert_equal(expected_desc, resp_body['fieldErrors'][0]['description'], "error description does not match expected")
     end
 
-    def test_all_media
+    def test_valid_media    # Test Media Upload, List, Download, and Delete
         media_name = 'ruby_media' + SecureRandom.uuid
         media_data = '123456'
 
-        #media upload
+        # upload media
         up_response = $api_instance_media.upload_media_with_http_info(BW_ACCOUNT_ID, media_name, media_data)
-        assert_equal(204, up_response[1], "incorrect response code")
+        assert_equal(204, up_response[CODE], "incorrect response code")
 
-        #media list
+        # list media
         list_media = $api_instance_media.list_media_with_http_info(BW_ACCOUNT_ID)
-        assert_equal(200, list_media[1], "incorrect response code")
-        assert_equal(media_data.length, list_media[0][0].content_length, "incorrect data length")
-        assert_equal(media_name, list_media[0][0].media_name, "could not find media on account")
+        assert_equal(200, list_media[CODE], "incorrect response code")
+        assert_equal(media_data.length, list_media[DATA][0].content_length, "incorrect data length")
+        assert_equal(media_name, list_media[DATA][0].media_name, "could not find media on account")
 
-        #media download
-        downloaded_media_file = $api_instance_media.get_media_with_http_info(BW_ACCOUNT_ID, media_name, debug_return_type: 'String')
-        assert_equal(200, downloaded_media_file[1], "incorrect response code")
-        assert_equal(media_data, downloaded_media_file[0], "downloaded media file not equal to upload")
+        # download media
+        downloaded_media = $api_instance_media.get_media_with_http_info(BW_ACCOUNT_ID, media_name, debug_return_type: 'String')
+        assert_equal(200, downloaded_media[CODE], "incorrect response code")
+        assert_equal(media_data, downloaded_media[DATA], "downloaded media file not equal to upload")
 
-        #media delete
+        # delete media
         del_response = $api_instance_media.delete_media_with_http_info(BW_ACCOUNT_ID, media_name)
-        assert_equal(204, del_response[1], "incorrect response code")
+        assert_equal(204, del_response[CODE], "incorrect response code")
     end
+
+    def test_get_delete_invalid_media      # Test to make sure correct errors are thrown when trying to list and get media that does not exist
+        media_name = "invalid_media"
+        # get media
+        e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_media.get_media_with_http_info(BW_ACCOUNT_ID, media_name, debug_return_type: 'String')
+        end
+        assert_equal(404, e.code, "incorrect response code")
+        assert_equal("object-not-found", JSON.parse(e.response_body)['type'], "response error type does not match")
+
+        # delete media (the fact that this returns a 204 is actually painful, but we need to verify ¯\_(ツ)_/¯)
+        del_response = $api_instance_media.delete_media_with_http_info(BW_ACCOUNT_ID, media_name)
+        assert_equal(204, del_response[CODE], "incorrect response code")
+    end
+
 
     #-----------Voice Tests-----------
     $api_instance_voice = RubySdk::CallsApi.new()
     
-    def test_create_call_and_get_call_state
+    def test_create_call_and_get_call_state     # Test to create an outbound call and get its state
+        amd_config = RubySdk::MachineDetectionConfiguration.new(
+            mode: "async",
+            detection_timeout: 5.0,
+            silence_timeout: 5.0,
+            speech_threshold: 5.0,
+            speech_end_threshold: 5.0,
+            delay_result: true,
+            callback_url: BASE_CALLBACK_URL + "/machineDetection",
+            callback_method: "POST"
+        )
         call_body = RubySdk::CreateCallRequest.new(
             application_id: BW_VOICE_APPLICATION_ID,
             to: USER_NUMBER,
             from: BW_NUMBER,
-            answer_url: BASE_CALLBACK_URL
+            answer_url: BASE_CALLBACK_URL + "/callbacks/answer",
+            answer_method: "POST",
+            disconnect_url: BASE_CALLBACK_URL + "/callbacks/disconnect",
+            disconnect_method: "GET",
+            machine_detection: amd_config
         )
-        # call_body.to = USER_NUMBER
-        # call_body.from = BW_NUMBER
-        # call_body.application_id = BW_VOICE_APPLICATION_ID
-        # call_body.answer_url = BASE_CALLBACK_URL
-        response = $api_instance_voice.create_call_with_http_info(BW_ACCOUNT_ID, call_body)
-        assert_equal(201, response[1], "incorrect status code")
+        call_response = $api_instance_voice.create_call_with_http_info(BW_ACCOUNT_ID, call_body)
+        sleep(3)
+        # asserts for creating call
+        assert_equal(201, call_response[CODE], "incorrect response code")
+        assert_equal(47, call_response[DATA].call_id.length, "id not set")
+        assert_equal(BW_ACCOUNT_ID, call_response[DATA].account_id, "account id does not match")
+        assert_equal(BW_VOICE_APPLICATION_ID, call_response[DATA].application_id, "application id does not match")
+        assert_equal(USER_NUMBER, call_response[DATA].to, "to number does not match")
+        assert_equal(BW_NUMBER, call_response[DATA].from, "from number does not match")
+        assert_equal("https://voice.bandwidth.com/api/v2/accounts/" + BW_ACCOUNT_ID + "/calls/" + call_response[DATA].call_id, call_response[DATA].call_url, "call url does not match")
+        assert(call_response[DATA].call_timeout.is_a?(Float), "incorrect call timeout data type")
+        assert(call_response[DATA].callback_timeout.is_a?(Float), "incorrect callback timeout data type")
+        assert(call_response[DATA].start_time.is_a?(Time), "incorrect start time data type")
+        assert_equal("POST", call_response[DATA].answer_method, "answer method does not match")
+        assert_equal("GET", call_response[DATA].disconnect_method, "disconnect method does not match")
+        assert_equal(BASE_CALLBACK_URL + "/callbacks/answer", call_response[DATA].answer_url, "answer url does not match")
+        assert_equal(BASE_CALLBACK_URL + "/callbacks/disconnect", call_response[DATA].disconnect_url, "disconnect url does not match")
+
+        
+        get_call_response = $api_instance_voice.get_call_with_http_info(BW_ACCOUNT_ID, call_response[DATA].call_id)
+        #asserts for getting call state
+        assert_equal(200, get_call_response[CODE], "incorrect response code")
+        assert_equal(call_response[DATA].call_id, get_call_response[DATA].call_id)
+        assert_equal(BW_ACCOUNT_ID, get_call_response[DATA].account_id, "account id does not match")
+        assert_equal(BW_VOICE_APPLICATION_ID, get_call_response[DATA].application_id, "application id does not match")
+        assert(get_call_response[DATA].start_time.is_a?(Time), "incorrect start time data type")
+        assert(get_call_response[DATA].last_update.is_a?(Time), "incorrect last update time data type")
+        if get_call_response[DATA].answer_time
+            assert(get_call_response[DATA].answer_time.is_a?(Time), "incorrect answer time data type")
+        end
+        if get_call_response[DATA].end_time
+            assert(get_call_response[DATA].end_time.is_a?(Time), "incorrect end time data type")
+        end
+        if get_call_response[DATA].disconnect_cause == "error"
+            assert(get_call_response[DATA].error_message.is_a?(String), "incorrect error message data type")
+            assert_equal(36, get_call_response[DATA].error_id.length, "error id not set")
+        end
+    end
+
+    def test_create_get_failed_call     # Test to make sure correct errors are thrown when trying to create a call incorrectly and get a call that does not exist
+        call_body = RubySdk::CreateCallRequest.new(
+            application_id: BW_VOICE_APPLICATION_ID,
+            to: "+1invalid",
+            from: BW_NUMBER,
+            answer_url: BASE_CALLBACK_URL + "/callbacks/answer",
+            answer_method: "POST",
+            disconnect_url: BASE_CALLBACK_URL + "/callbacks/disconnect",
+            disconnect_method: "GET"
+        )
+
+        call_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_voice.create_call_with_http_info(BW_ACCOUNT_ID, call_body)
+        end
+        get_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            $api_instance_voice.get_call_with_http_info(BW_ACCOUNT_ID, "does-not-exist")
+        end
+
+        # asserts for creating bad call
+        assert_equal(400, call_e.code, "incorrect response code")
+        assert_equal("validation", JSON.parse(call_e.response_body)['type'], "response error type does not match")
+        assert(JSON.parse(call_e.response_body)['description'].is_a?(String), "incorrect error description type")
+
+        # asserts for getting non-existent call
+        assert_equal(404, get_e.code, "incorrect response code")
+        #assert_equal("", JSON.parse(get_e.response_body)['type'], "response error type does not match") for some reason, this doesnt have a response body 🙃
+        #assert(JSON.parse(get_e.response_body)['description'], "incorrect error description type")
+    end
+
+    #-----------MFA Tests-----------
+    $api_instance_mfa = RubySdk::MFAApi.new()
+
+    def test_mfa_messaging     # Test to send a messaging mfa code
+    req_schema = RubySdk::TwoFactorCodeRequestSchema.new(
+        to: USER_NUMBER,
+        from: BW_NUMBER,
+        application_id: BW_MESSAGING_APPLICATION_ID,
+        message: "Your temporary {NAME} {SCOPE} code is: {CODE}",
+        digits: 6
+    )
+    mfa_response = $api_instance_mfa.messaging_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
+    assert_equal(200, mfa_response[CODE], "incorrect response code")
+    assert_equal(29, mfa_response[DATA].message_id.length, "message id not set")
+    end
+
+    def test_failed_mfa_messaging      # Test to make sure correct errors are thrown when trying to send a messaging mfa code incorrectly
+    req_schema = RubySdk::TwoFactorCodeRequestSchema.new(
+        to: USER_NUMBER,
+        from: BW_NUMBER,
+        application_id: BW_MESSAGING_APPLICATION_ID,
+        message: "Your temporary {NAME} {SCOPE} code is: ",
+        digits: 6
+    )
+    e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+        $api_instance_mfa.messaging_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
+    end
+    assert_equal(400, e.code, "incorrect response code")
+    assert_equal("{CODE} is required in MFA message", JSON.parse(e.response_body)['error'], "response error does not match")
+    end
+
+    def test_mfa_voice     # Test to send a voice mfa code
+    req_schema = RubySdk::TwoFactorCodeRequestSchema.new(
+        to: USER_NUMBER,
+        from: BW_NUMBER,
+        application_id: BW_VOICE_APPLICATION_ID,
+        message: "Your temporary {NAME} {SCOPE} code is: {CODE}",
+        digits: 6
+    )
+    mfa_response = $api_instance_mfa.voice_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
+    assert_equal(200, mfa_response[CODE], "incorrect response code")
+    assert_equal(47, mfa_response[DATA].call_id.length, "message id not set")
+    end
+
+    def test_failed_mfa_voice      # Test to make sure correct errors are thrown when trying to send a voice mfa code incorrectly
+    req_schema = RubySdk::TwoFactorCodeRequestSchema.new(
+        to: USER_NUMBER,
+        from: BW_NUMBER,
+        application_id: BW_VOICE_APPLICATION_ID,
+        message: "Your temporary {NAME} {SCOPE} code is: ",
+        digits: 6
+    )
+    e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
+        $api_instance_mfa.voice_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
+    end
+    assert_equal(400, e.code, "incorrect response code")
+    assert_equal("{CODE} is required in MFA message", JSON.parse(e.response_body)['error'], "response error does not match")
+    end
+
+    def test_mfa_verify # Test to verify a correct received mfa code
+    omit("Currently no way to do this without receiving callbacks")
+    req_schema = RubySdk::TwoFactorVerifyRequestSchema.new(
+        to: BW_NUMBER,
+        application_id: BW_VOICE_APPLICATION_ID,
+        expiration_time_in_minutes: 3,
+        code: "123456"
+    )
+    mfa_response = $api_instance_mfa.verify_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
+    assert_equal(200, mfa_response[CODE], "incorrect response code")
+    assert(mfa_response[DATA].valid.is_a?(TrueClass), "incorrect valid data type")
+    end
+
+    def test_failed_mfa_verify     # Test to verify an incorrect received mfa code 
+    req_schema = RubySdk::TwoFactorVerifyRequestSchema.new(
+        to: BW_NUMBER,
+        application_id: BW_VOICE_APPLICATION_ID,
+        expiration_time_in_minutes: 3,
+        code: "12345"   # 5 digits so as to never match one randomly generated by previous tests
+    )
+    mfa_response = $api_instance_mfa.verify_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
+    assert_equal(200, mfa_response[CODE], "incorrect response code")
+    assert(mfa_response[DATA].valid.is_a?(FalseClass), "incorrect valid data type")
+    end
+
+    #-----------WebRTC Tests-----------
+    $api_instance_webrtc = RubySdk::SessionsApi.new()
+
+    def test_webrtc_create_get_delete_session      # Test to create, get, and delete a webrtc session
+    session_body = RubySdk::Session.new(
+        tag: "ruby sdk test"
+    )
+    create_response = $api_instance_webrtc.create_session_with_http_info(BW_ACCOUNT_ID, session: session_body)
+    assert_equal(200, create_response[CODE], "incorrect response code")
+    assert_equal(36, create_response[DATA].id.length, "session id not set")
+    assert_equal(session_body.tag.to_s, create_response[DATA].tag, "created session tag does not match expected")
+
+    get_response = $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, create_response[DATA].id)
+    assert_equal(200, get_response[CODE], "incorrect response code")
+    assert_equal(create_response[DATA].id, get_response[DATA].id, "session id does not match")
+    assert_equal(session_body.tag.to_s, get_response[DATA].tag, "gotten session tag does not match expected")
+    end
+
+    def test_failed_get_session
+        bad_id = "invalid"
+        assert_raise(RubySdk::ApiError, "expected exception not raised") do
+            response = $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, bad_id)
+        end
+        assert_equal(404, response[CODE], "incorrect response code")
+        asser
     end
 end
