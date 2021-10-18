@@ -1,6 +1,6 @@
 # RubySdk::MessagesApi
 
-All URIs are relative to *http://localhost*
+All URIs are relative to *https://numbers.bandwidth.com/api/v1*
 
 | Method | HTTP request | Description |
 | ------ | ------------ | ----------- |

@@ -376,6 +376,18 @@ module RubySdk
           description: "Messaging API",
           }
         ],
+        "PhoneNumberLookupApi.lookup_request": [
+          {
+          url: "https://numbers.bandwidth.com/api/v1",
+          description: "TN Lookup API",
+          }
+        ],
+        "PhoneNumberLookupApi.lookup_request_status": [
+          {
+          url: "https://numbers.bandwidth.com/api/v1",
+          description: "TN Lookup API",
+          }
+        ],
         "RecordingsApi.delete_call_transcription": [
           {
           url: "https://voice.bandwidth.com",
@@ -439,7 +451,7 @@ module RubySdk
         "SessionsApi.add_participant_to_session": [
           {
           url: "https://api.webrtc.bandwidth.com/v1",
-          description: "Messaging API",
+          description: "Webrtc API",
           }
         ],
         "SessionsApi.create_session": [
@@ -457,7 +469,7 @@ module RubySdk
         "SessionsApi.get_participant_subscriptions": [
           {
           url: "https://api.webrtc.bandwidth.com/v1",
-          description: "Messaging API",
+          description: "WebRtc API",
           }
         ],
         "SessionsApi.get_session": [
@@ -475,13 +487,13 @@ module RubySdk
         "SessionsApi.remove_participant_from_session": [
           {
           url: "https://api.webrtc.bandwidth.com/v1",
-          description: "Messaging API",
+          description: "Webrtc API",
           }
         ],
         "SessionsApi.update_participant_subscriptions": [
           {
           url: "https://api.webrtc.bandwidth.com/v1",
-          description: "Messaging API",
+          description: "WebRtc API",
           }
         ],
       }

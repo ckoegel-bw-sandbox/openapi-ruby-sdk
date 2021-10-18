@@ -11,4 +11,4 @@ script:
   - bundle install --path vendor/bundle
   - bundle exec rspec
   - gem build openapi_ruby_sdk.gemspec
-  - gem install ./openapi_ruby_sdk-1.0.0.gem
+  - gem install ./openapi_ruby_sdk-1.1.0.gem
