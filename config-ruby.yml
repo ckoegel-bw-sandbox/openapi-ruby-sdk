@@ -1,0 +1,4 @@
+library: faraday
+gemName: openapi_ruby_sdk
+moduleName: RubySdk
+gemVersion: 1.0.0
