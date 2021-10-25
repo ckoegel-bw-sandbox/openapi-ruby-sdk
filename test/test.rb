@@ -186,7 +186,7 @@ class ValidationTest < Test::Unit::TestCase
         get_call_response = $api_instance_voice.get_call_with_http_info(BW_ACCOUNT_ID, call_response[DATA].call_id)
         #asserts for getting call state
         assert_equal(200, get_call_response[CODE], "incorrect response code")
-        assert_equal(call_response[DATA].call_id, get_call_response[DATA].call_id)
+        assert_equal(call_response[DATA].call_id, get_call_response[DATA].call_id, "call id does not match")
         assert_equal(BW_ACCOUNT_ID, get_call_response[DATA].account_id, "account id does not match")
         assert_equal(BW_VOICE_APPLICATION_ID, get_call_response[DATA].application_id, "application id does not match")
         assert(get_call_response[DATA].start_time.is_a?(Time), "incorrect start time data type")
@@ -275,7 +275,7 @@ class ValidationTest < Test::Unit::TestCase
     )
     mfa_response = $api_instance_mfa.voice_two_factor_with_http_info(BW_ACCOUNT_ID, req_schema)
     assert_equal(200, mfa_response[CODE], "incorrect response code")
-    assert_equal(47, mfa_response[DATA].call_id.length, "message id not set")
+    assert_equal(47, mfa_response[DATA].call_id.length, "call id not set")
     end
 
     def test_failed_mfa_voice      # Test to make sure correct errors are thrown when trying to send a voice mfa code incorrectly
@@ -306,7 +306,7 @@ class ValidationTest < Test::Unit::TestCase
     assert(mfa_response[DATA].valid.is_a?(TrueClass), "incorrect valid data type")
     end
 
-    def test_failed_mfa_verify     # Test to verify an incorrect received mfa code 
+    def test_failed_mfa_verify     # Test to verify an incorrect received mfa code
     req_schema = RubySdk::TwoFactorVerifyRequestSchema.new(
         to: "+1000" + rand(1...10000000).to_s,
         application_id: BW_VOICE_APPLICATION_ID,
@@ -337,7 +337,7 @@ class ValidationTest < Test::Unit::TestCase
     assert_equal(session_body.tag.to_s, get_response[DATA].tag, "gotten session tag does not match expected")
     end
 
-    def test_failed_get_session     # Test to make sure correct errors are thrown when improperly trying to get session details 
+    def test_failed_get_session     # Test to make sure correct errors are thrown when improperly trying to get session details
         bad_id = "invalid"
         dne_id = "11111111-2222-3333-4444-555555555555"
         expected_error = "Could not find session for id " + dne_id
