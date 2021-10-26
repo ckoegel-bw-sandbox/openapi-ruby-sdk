@@ -335,14 +335,17 @@ class ValidationTest < Test::Unit::TestCase
     assert_equal(200, get_response[CODE], "incorrect response code")
     assert_equal(create_response[DATA].id, get_response[DATA].id, "session id does not match")
     assert_equal(session_body.tag.to_s, get_response[DATA].tag, "gotten session tag does not match expected")
+
+    del_response = $api_instance_webrtc.delete_session_with_http_info(BW_ACCOUNT_ID, create_response[DATA].id)
+    assert_equal(204, del_response[CODE], "incorrect response code")
     end
 
     def test_failed_get_session     # Test to make sure correct errors are thrown when improperly trying to get session details
-        bad_id = "invalid"
+        malf_id = "invalid"
         dne_id = "11111111-2222-3333-4444-555555555555"
         expected_error = "Could not find session for id " + dne_id
         malf_e = assert_raise(RubySdk::ApiError, "expected exception not raised") do
-            $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, bad_id)
+            $api_instance_webrtc.get_session_with_http_info(BW_ACCOUNT_ID, malf_id)
         end
         assert_equal(400, malf_e.code, "incorrect response code")
         assert_equal("Malformed session id", JSON.parse(malf_e.response_body)['error'], "response error does not match")
@@ -409,7 +412,7 @@ class ValidationTest < Test::Unit::TestCase
     #-----------TN Lookup Tests-----------
     $api_instance_tnlookup = RubySdk::PhoneNumberLookupApi.new()
 
-    def test_create_get_tn_lookup
+    def test_create_get_tn_lookup   # Test to create and get the status of a TN Lookup Request
         tn_body = RubySdk::OrderRequest.new(
             tns: [BW_NUMBER]
         )
@@ -427,7 +430,7 @@ class ValidationTest < Test::Unit::TestCase
         assert_equal(BW_NUMBER, get_response[DATA].result[0].e_164_format, "phone number does not match")
     end
 
-    def test_failed_create_get_tn_lookup
+    def test_failed_create_get_tn_lookup    # Test to make sure correct errors are thrown when trying to improperly create and get a TN Lookup Request
         tn_body_bad = RubySdk::OrderRequest.new(
             tns: ["+1invalid"]
         )
