@@ -421,6 +421,8 @@ class ValidationTest < Test::Unit::TestCase
         assert_equal(36, create_response[DATA].request_id.length, "request id not set")
         assert(create_response[DATA].status.is_a?(String), "incorrect status data type")
 
+        sleep(1)
+
         req_id = create_response[DATA].request_id
         get_response = $api_instance_tnlookup.lookup_request_status_with_http_info(BW_ACCOUNT_ID, req_id)
         assert_equal(200, get_response[CODE], "incorrect response code")
